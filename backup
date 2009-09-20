@@ -1,0 +1,165 @@
+#!/bin/bash
+
+#
+# Author: Kurt L Vanderwater
+# Date:   October 2, 2001
+# Purpose:
+#	This program is used to backup all "user" directories
+#
+# Updates:
+#	Jan 14, 2002 - klv - Added logic for removing runtime from age equation
+#	Dec 29, 2001 - klv - Changed from single file megabackup to directory based archives
+#	Dec 29, 2001 - klv - commented out deletion of tempory executable
+#	Dec 29, 2001 - klv - moved all variables to top of program for easy maint
+#
+
+seconds=86400;			# number of seconds in a day.
+days=2;				# number of days to keep.
+now=`date +%s`;			# current date & time as total elapsed seconds since Jan 1, 1970
+runtime=$((3600 * 3));		# number of hours it might take to run these procedures.
+age=$(($seconds*$days)); 	# total seconds to subtract
+age=$(($age-$runtime));	# adjusted for estimated runtime
+old=$(($now-$age));		# file/directory date & time stamps less than this will be deleted!
+DIRNAME=`date +%Y%b%d`		# datestamp name for directory
+TMPFILE1="/tmp/backup_1"	# temporary file used to build the backup script
+TMPAWK1="/tmp/backup_awk_1"	# temporary file used to define the AWK program to build the backup script
+BDIR="/var/spool/backup/daily"	# base directory for the destination of all the backups.
+#
+# The 3 lists below are NameLIST, DirectoryLIST, & ExcludeLIST. These are used to define the name of 
+# the backup file, the base directory for the backup file, and any exclusions that should occur from that
+# directory structure.
+#
+# echo "Defining directories to process"
+NLIST[0]="bak_etc";		DLIST[0]="/etc";	ELIST[0]="";
+NLIST[1]="bak_var";		DLIST[1]="/var";	ELIST[1]="spool/backup";
+NLIST[2]="bak_usr";		DLIST[2]="/usr";	ELIST[2]="";
+NLIST[3]="bak_root";		DLIST[3]="/root";	ELIST[3]="";
+
+# echo "Defining scriptbypasswd"
+function scriptbypasswd() {
+	# build the script to actually do the backups
+
+	cat <<"EOF" | sed -e "s~Z-0-Z~$DIRNAME~" | sed -e "s~Z-1-Z~$BDIR~" > $TMPAWK1
+	BEGIN { 
+		FS = ":"
+	}
+	{
+		if($3 >= 500 && $3 < 65000){
+			if($1 == "webtrends"){
+				;
+			} else {
+				print "cd "$6
+				print "rc=$?"
+				print "if (($rc == 0)); then"
+				print " tar -czf Z-1-Z/Z-0-Z/"$1".tar.gz *"
+				print " chmod 660 Z-1-Z/Z-0-Z/"$1".tar.gz"
+				print " if [ '"$7"' = '/bin/true' ]; then"
+				print "  chown "$1" Z-1-Z/Z-0-Z/"$1".tar.gz"
+				print "  chgrp webadmin Z-1-Z/Z-0-Z/"$1".tar.gz"
+				print " else"
+				print "  chown "$1" Z-1-Z/Z-0-Z/"$1".tar.gz"
+				print " fi"
+				print " rc=$?"
+				print " if (($rc == 0)); then"
+				print " 	rm -f "$6"/backup.tar.gz"
+				print " 	ln -s Z-1-Z/Z-0-Z/"$1".tar.gz "$6"/backup.tar.gz"
+				print " 	chown "$1" "$6"/backup.tar.gz"
+				print " fi"
+				print "fi"
+			}
+		}
+	}
+EOF
+
+	cat /etc/passwd | awk -f $TMPAWK1 > $TMPFILE1
+
+}
+
+# echo "Defining scriptbyhome"
+function scriptbyhome() {
+	# build the script to actually do the backups
+
+	cat <<"EOF" | sed -e "s~Z-0-Z~$DIRNAME~" | sed -e "s~Z-1-Z~$BDIR~" > $TMPAWK1
+	BEGIN { 
+		FS = ":"
+	}
+	{
+		print "cd /home/"$1
+		print "rc=$?"
+		print "if (($rc == 0)); then"
+		print " tar -czf Z-1-Z/Z-0-Z/"$1".tar.gz *"
+		print " chmod 660 Z-1-Z/Z-0-Z/"$1".tar.gz"
+		print " chown "$1" Z-1-Z/Z-0-Z/"$1".tar.gz"
+		print " rc=$?"
+		print " if (($rc == 0)); then"
+		print " 	rm -f "$1"/backup.tar.gz"
+		print " 	ln -s Z-1-Z/Z-0-Z/"$1".tar.gz "$1"/backup.tar.gz"
+		print " 	chown "$1" "$1"/backup.tar.gz"
+		print " fi"
+		print "fi"
+	}
+EOF
+
+	ls -al /home | grep ^d | sed '1,2d' | awk '{print $9}' | awk -f $TMPAWK1 > $TMPFILE1
+
+}
+
+# Check and see if the backup directory exists
+# echo "Check and see if the backup directory exists"
+if [ ! -d $BDIR/$DIRNAME ]; then
+	mkdir -p $BDIR/$DIRNAME;
+fi
+
+# save our directory position
+
+# echo "save our directory position"
+pushd . > /dev/null 2>&1
+
+# get rid of any old backups
+
+# echo "get rid of any old backups"
+pushd . > /dev/null 2>&1
+cd $BDIR
+
+for d in `ls`; do
+	dage=`date -r $d +%s`;	# get the directory age in seconds
+	if (($dage < $old)); then
+		rm -fR $d
+	fi
+done 
+popd
+
+# backup the specified directories now
+
+# echo "backup the specified directories now"
+for (( i=0; i<$((${#DLIST[@]})); i=i+1 )); do
+	pushd . > /dev/null 2>&1
+	cd ${DLIST[i]}
+	size_in_k=`du -s | awk '{print $1}'`
+	# if ($size_in_k > 2000000); then
+	# 	dummy = ""; # do the dd stuff with split
+	# else
+# 		echo "...processing $BDIR/$DIRNAME/${NLIST[i]}"
+		if [ -n ${ELIST[i]} ]; then
+			tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz --exclude=${ELIST[i]} *;
+		else
+			tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz *;
+		fi
+	# fi
+	popd
+done
+
+# do the client backups now
+
+# echo "do the client backups now"
+scriptbypasswd
+pushd . > /dev/null 2>&1
+. $TMPFILE1
+popd
+
+# return the directory to normal
+
+# echo "return the directory to normal"
+popd
+
+# rm -f $TMPFILE1
