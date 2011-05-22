@@ -30,10 +30,11 @@ BDIR="/var/spool/backup/daily"	# base directory for the destination of all the b
 # directory structure.
 #
 # echo "Defining directories to process"
-NLIST[0]="bak_etc";		DLIST[0]="/etc";	ELIST[0]="";
-NLIST[1]="bak_var";		DLIST[1]="/var";	ELIST[1]="spool/backup";
-NLIST[2]="bak_usr";		DLIST[2]="/usr";	ELIST[2]="";
-NLIST[3]="bak_root";		DLIST[3]="/root";	ELIST[3]="";
+i=0
+NLIST[$i]="bak_etc";		DLIST[$i]="/etc";	ELIST[$((i++))]="";
+NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup";
+NLIST[$i]="bak_usr";		DLIST[$i]="/usr";	ELIST[$((i++))]="";
+NLIST[$i]="bak_root";		DLIST[$i]="/root";	ELIST[$((i++))]="";
 
 # echo "Defining scriptbypasswd"
 function scriptbypasswd() {
@@ -132,20 +133,14 @@ popd
 # backup the specified directories now
 
 # echo "backup the specified directories now"
-for (( i=0; i<$((${#DLIST[@]})); i=i+1 )); do
+for (( i=0; i<$((${#DLIST[@]})); i++ )); do
 	pushd . > /dev/null 2>&1
 	cd ${DLIST[i]}
-	size_in_k=`du -s | awk '{print $1}'`
-	# if ($size_in_k > 2000000); then
-	# 	dummy = ""; # do the dd stuff with split
-	# else
-# 		echo "...processing $BDIR/$DIRNAME/${NLIST[i]}"
-		if [ -n ${ELIST[i]} ]; then
-			tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz --exclude=${ELIST[i]} *;
-		else
-			tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz *;
-		fi
-	# fi
+  if [ -n ${ELIST[i]} ]; then
+    tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz --exclude=${ELIST[i]} *;
+  else
+    tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz *;
+  fi
 	popd
 done
 
