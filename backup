@@ -13,13 +13,57 @@
 #	Dec 29, 2001 - klv - moved all variables to top of program for easy maint
 #
 
+
+#################################
+### VARIABLES 
+#################################
+
+#################################
+# yesterday
+#   This variable is used to define a folder name.
+#   It is used when we are creating the next 'current' folder.
+#   So, current becomes the date of 'yesterday'
+#
 yesterday=`date --date="yesterday" +"%Y-%m-%d"`
+
+
+#################################
+# backup_eldest
+#   This is the number of days back (versions) that we want to keep on disk.
+#
 backup_eldest=`date --date="-1 days" +%Y%b%d`
+
+
+#################################
+# mysql_eldest
+#   This is the number of days back (versions) that we want to keep on disk.
+#
 mysql_eldest=`date --date="-5 days" +"%Y-%m-%d"`
+
+
+#################################
+# DIRNAME
+#   This is the foldername that is used for the data
+#
 DIRNAME=`date +%Y%b%d`		# datestamp name for directory
+
+
+#################################
+# TMPFILE1
+# TMPAWK1
+#   These files are used during the build process for 'home' folder backups
+#
 TMPFILE1="/tmp/backup_1"	# temporary file used to build the backup script
 TMPAWK1="/tmp/backup_awk_1"	# temporary file used to define the AWK program to build the backup script
+
+
+#################################
+# BDIR
+#  This is the base folder where daily backups are kept. 
+#
 BDIR="/var/spool/backup/daily"	# base directory for the destination of all the backups.
+
+
 #
 # The 3 lists below are NameLIST, DirectoryLIST, & ExcludeLIST. These are used to define the name of 
 # the backup file, the base directory for the backup file, and any exclusions that should occur from that
