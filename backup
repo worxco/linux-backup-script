@@ -13,13 +13,9 @@
 #	Dec 29, 2001 - klv - moved all variables to top of program for easy maint
 #
 
-seconds=86400;			# number of seconds in a day.
-days=2;				# number of days to keep.
-now=`date +%s`;			# current date & time as total elapsed seconds since Jan 1, 1970
-runtime=$((3600 * 3));		# number of hours it might take to run these procedures.
-age=$(($seconds*$days)); 	# total seconds to subtract
-age=$(($age-$runtime));	# adjusted for estimated runtime
-old=$(($now-$age));		# file/directory date & time stamps less than this will be deleted!
+yesterday=`date --date="yesterday" +"%Y-%m-%d"`
+backup_eldest=`date --date="-1 days" +%Y%b%d`
+mysql_eldest=`date --date="-5 days" +"%Y-%m-%d"`
 DIRNAME=`date +%Y%b%d`		# datestamp name for directory
 TMPFILE1="/tmp/backup_1"	# temporary file used to build the backup script
 TMPAWK1="/tmp/backup_awk_1"	# temporary file used to define the AWK program to build the backup script
@@ -32,7 +28,7 @@ BDIR="/var/spool/backup/daily"	# base directory for the destination of all the b
 # echo "Defining directories to process"
 i=0
 NLIST[$i]="bak_etc";		DLIST[$i]="/etc";	ELIST[$((i++))]="";
-NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup";
+NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup --exclude=spool/mysqldumps --exclude=cache --exclude=log --exclude=tmp --exclude=www --exclude=www2 --exclude=run --exclude=lock";
 NLIST[$i]="bak_usr";		DLIST[$i]="/usr";	ELIST[$((i++))]="";
 NLIST[$i]="bak_root";		DLIST[$i]="/root";	ELIST[$((i++))]="";
 
@@ -121,14 +117,16 @@ pushd . > /dev/null 2>&1
 # echo "get rid of any old backups"
 pushd . > /dev/null 2>&1
 cd $BDIR
-
-for d in `ls`; do
-	dage=`date -r $d +%s`;	# get the directory age in seconds
-	if (($dage < $old)); then
-		rm -fR $d
-	fi
-done 
+rm -fR $backup_eldest
 popd
+
+# Set folder for current Mysql Databases
+pushd /var/spool/mysqldumps
+mv current $yesterday
+rm -fR $mysql_eldest
+popd
+# Backup the Mysql Databases
+mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} mydump.sh {}
 
 # backup the specified directories now
 
