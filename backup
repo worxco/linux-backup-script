@@ -28,17 +28,29 @@ yesterday=`date --date="yesterday" +"%Y-%m-%d"`
 
 
 #################################
-# backup_eldest
+# bdays
 #   This is the number of days back (versions) that we want to keep on disk.
+bdays=1
+
+
+#################################
+# backup_eldest
+#   The date format for the number of days back (versions) that we want to keep on disk.
 #
-backup_eldest=`date --date="-1 days" +%Y%b%d`
+backup_eldest=`date --date="-${bdays} days" +%Y%b%d`
+
+
+#################################
+# mdays
+#   This is the number of days back (versions) that we want to keep on disk.
+mdays=5
 
 
 #################################
 # mysql_eldest
-#   This is the number of days back (versions) that we want to keep on disk.
+#   The date format for the number of days back (versions) that we want to keep on disk.
 #
-mysql_eldest=`date --date="-5 days" +"%Y-%m-%d"`
+mysql_eldest=`date --date="-${mdays} days" +"%Y-%m-%d"`
 
 
 #################################
@@ -77,6 +89,8 @@ NLIST[$i]="bak_usr";		DLIST[$i]="/usr";	ELIST[$((i++))]="";
 NLIST[$i]="bak_root";		DLIST[$i]="/root";	ELIST[$((i++))]="";
 
 #################################
+# Defining scriptbypasswd
+#   This function looks for users by parsing the passwd file in /etc
 function scriptbypasswd() {
 	# build the script to actually do the backups
 
@@ -117,6 +131,8 @@ EOF
 }
 
 #################################
+# Defining scriptbyhome
+#   This function looks for users by folders in /home
 function scriptbyhome() {
 	# build the script to actually do the backups
 
@@ -145,28 +161,37 @@ EOF
 
 }
 
+#################################
 # Check and see if the backup directory exists
 if [ ! -d $BDIR/$DIRNAME ]; then
 	mkdir -p $BDIR/$DIRNAME;
 fi
 
+#################################
 # save our directory position
 pushd . > /dev/null 2>&1
 
+#################################
 # get rid of any old backups
+#   The 'find' command should be updated before year 2100
 pushd . > /dev/null 2>&1
 cd $BDIR
 rm -fR $backup_eldest
+find 20* -maxdepth 1 -type d -ctime +${bdays} -exec rm -fR {} \;
 popd
 
+#################################
 # Set folder for current Mysql Databases
+#   The 'find' command should be updated before year 2100
 pushd /var/spool/mysqldumps
 mv current $yesterday
 rm -fR $mysql_eldest
+find 20* -maxdepth 1 -type d -ctime +${mdays} -exec rm -fR {} \;
 popd
 # Backup the Mysql Databases
 mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} mydump.sh {}
 
+#################################
 # backup the specified directories now
 for (( i=0; i<$((${#DLIST[@]})); i++ )); do
 	pushd . > /dev/null 2>&1
@@ -193,6 +218,7 @@ pushd . > /dev/null 2>&1
 . $TMPFILE1
 popd
 
+#################################
 # return the directory to normal
 
 popd
