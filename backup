@@ -77,6 +77,13 @@ BDIR="/var/spool/backup/daily"	# base directory for the destination of all the b
 
 
 #################################
+# MDIR
+#  This is the base folder where daily mysql dumps are kept.
+#
+MDIR="/var/spool/mysqldumps"    # base directory for the destination of all mysql dumps.
+
+
+#################################
 # The 3 lists below are NameLIST, DirectoryLIST, & ExcludeLIST. These are used to define the name of 
 # the backup file, the base directory for the backup file, and any exclusions that should occur from that
 # directory structure.
@@ -183,13 +190,41 @@ popd
 #################################
 # Set folder for current Mysql Databases
 #   The 'find' command should be updated before year 2100
-pushd /var/spool/mysqldumps
+if [ ! -d $MDIR ]; then
+	mkdir -p $MDIR;
+fi
+
+pushd $MDIR
 mv current $yesterday
 rm -fR $mysql_eldest
 find 20* -maxdepth 1 -type d -ctime +${mdays} -exec rm -fR {} \;
 popd
+#################################
 # Backup the Mysql Databases
-mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} mydump.sh {}
+#   This requires that a small script be built to pass into from xargs
+cat <<"EOF" | sed -e "s~Z-0-Z~$MDIR~" > $TMPFILE2
+#!/bin/bash
+
+# Programmer: Kurt L Vanderwater
+# Written:    10-4-11
+# Purpose:
+#     Manage backups of the mysql databases
+#
+# Params:
+#   $1 - The database name
+
+mkdir -p Z-0-Z/current
+pushd Z-0-Z/current
+
+echo "Processing Database $1"
+mysqldump --skip-extended-insert $1 | gzip > ${1}.sql.gz
+ls -l ${1}.sql.gz
+
+popd
+EOF
+
+chmod a+x $TMPFILE2
+mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} $TMPFILE2 {}
 
 #################################
 # backup the specified directories now
