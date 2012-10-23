@@ -169,25 +169,7 @@ EOF
 
 }
 
-#################################
-# Check and see if the backup directory exists
-if [ ! -d $BDIR/$DIRNAME ]; then
-	mkdir -p $BDIR/$DIRNAME;
-fi
-
-#################################
-# save our directory position
-pushd . > /dev/null 2>&1
-
-#################################
-# get rid of any old backups
-#   The 'find' command should be updated before year 2100
-pushd . > /dev/null 2>&1
-cd $BDIR
-rm -fR $backup_eldest
-find 20* -maxdepth 1 -type d -ctime +${bdays} -exec rm -fR {} \;
-popd
-
+function mysql_back() {
 #################################
 # Set folder for current Mysql Databases
 #   The 'find' command should be updated before year 2100
@@ -226,6 +208,28 @@ EOF
 
 chmod a+x $TMPFILE2
 mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} $TMPFILE2 {}
+}
+
+function backup_main() {
+#################################
+# Check and see if the backup directory exists
+if [ ! -d $BDIR/$DIRNAME ]; then
+	mkdir -p $BDIR/$DIRNAME;
+fi
+
+#################################
+# save our directory position
+pushd . > /dev/null 2>&1
+
+#################################
+# get rid of any old backups
+#   The 'find' command should be updated before year 2100
+pushd . > /dev/null 2>&1
+cd $BDIR
+rm -fR $backup_eldest
+find 20* -maxdepth 1 -type d -ctime +${bdays} -exec rm -fR {} \;
+popd
+
 
 #################################
 # backup the specified directories now
@@ -260,3 +264,5 @@ popd
 popd
 
 rm -f $TMPFILE1
+}
+mysql_back
