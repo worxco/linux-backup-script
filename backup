@@ -24,7 +24,7 @@
 #   It is used when we are creating the next 'current' folder.
 #   So, current becomes the date of 'yesterday'
 #
-yesterday=`date --date="yesterday" +"%Y-%m-%d"`
+yesterday=$(date --date="yesterday" +"%Y-%m-%d")
 
 
 #################################
@@ -37,7 +37,7 @@ bdays=1
 # backup_eldest
 #   The date format for the number of days back (versions) that we want to keep on disk.
 #
-backup_eldest=`date --date="-${bdays} days" +%Y%b%d`
+backup_eldest=$(date --date="-${bdays} days" +%Y%b%d)
 
 
 #################################
@@ -50,14 +50,14 @@ mdays=5
 # mysql_eldest
 #   The date format for the number of days back (versions) that we want to keep on disk.
 #
-mysql_eldest=`date --date="-${mdays} days" +"%Y-%m-%d"`
+mysql_eldest=$(date --date="-${mdays} days" +"%Y-%m-%d")
 
 
 #################################
 # DIRNAME
 #   This is the foldername that is used for the data
 #
-DIRNAME=`date +%Y%b%d`		# datestamp name for directory
+DIRNAME=$(date +%Y%b%d)		# datestamp name for directory
 
 
 #################################
