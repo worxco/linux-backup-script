@@ -236,7 +236,7 @@ popd
 for (( i=0; i<$((${#DLIST[@]})); i++ )); do
 	pushd . > /dev/null 2>&1
 	cd ${DLIST[i]}
-  if [ -n ${ELIST[i]} ]; then
+  if [[ -n ${ELIST[i]} ]]; then
     tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz --exclude=${ELIST[i]} *;
   else
     tar -czf $BDIR/$DIRNAME/${NLIST[i]}.tar.gz *;
