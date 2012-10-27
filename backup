@@ -89,10 +89,10 @@ MDIR="/var/spool/mysqldumps"    # base directory for the destination of all mysq
 # the backup file, the base directory for the backup file, and any exclusions that should occur from that
 # directory structure.
 #
-# echo "Defining directories to process"
 i=0
 NLIST[$i]="bak_etc";		DLIST[$i]="/etc";	ELIST[$((i++))]="";
-NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup --exclude=spool/mysqldumps --exclude=cache --exclude=log --exclude=tmp --exclude=www --exclude=www2 --exclude=run --exclude=lock";
+NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup --exclude=spool/mysqldumps --exclude=cache --exclude=log --exclude=tmp --exclude=www --exclude=run --exclude=lock";
+NLIST[$i]="bak_var_www";	DLIST[$i]="/var/www";	ELIST[$((i++))]="";
 NLIST[$i]="bak_usr";		DLIST[$i]="/usr";	ELIST[$((i++))]="";
 NLIST[$i]="bak_root";		DLIST[$i]="/root";	ELIST[$((i++))]="";
 
