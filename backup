@@ -151,7 +151,7 @@ EOF
 chmod a+x $TMPFILE2
 mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} $TMPFILE2 {}
 
-[[ $S3_USE ]] && aws s3 sync /var/spool/mysqldumps/current s3://wx-mysqldumps/bcg/current/
+[[ $S3_USE ]] && aws s3 sync /var/spool/mysqldumps/current s3://${S3_BUCKET}/${S3_FOLDER}/current/
 
 }
 
