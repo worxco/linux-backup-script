@@ -13,8 +13,8 @@
 #	Dec 29, 2001 - klv - moved all variables to top of program for easy maint
 #
 
-
 source /etc/backup.config
+
 #################################
 # Defining scriptbypasswd
 #   This function looks for users by parsing the passwd file in /etc
