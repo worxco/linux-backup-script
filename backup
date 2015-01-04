@@ -210,5 +210,5 @@ popd
 
 rm -f $TMPFILE1
 }
-mysql_back
-# backup_main
+[[ $mysql_backup ]] && mysql_back
+[[ $main_backup ]] && backup_main
