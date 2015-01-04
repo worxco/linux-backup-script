@@ -14,88 +14,7 @@
 #
 
 
-#################################
-### VARIABLES 
-#################################
-
-#################################
-# yesterday
-#   This variable is used to define a folder name.
-#   It is used when we are creating the next 'current' folder.
-#   So, current becomes the date of 'yesterday'
-#
-yesterday=$(date --date="yesterday" +"%Y-%m-%d")
-
-
-#################################
-# bdays
-#   This is the number of days back (versions) that we want to keep on disk.
-bdays=1
-
-
-#################################
-# backup_eldest
-#   The date format for the number of days back (versions) that we want to keep on disk.
-#
-backup_eldest=$(date --date="-${bdays} days" +%Y%b%d)
-
-
-#################################
-# mdays
-#   This is the number of days back (versions) that we want to keep on disk.
-mdays=5
-
-
-#################################
-# mysql_eldest
-#   The date format for the number of days back (versions) that we want to keep on disk.
-#
-mysql_eldest=$(date --date="-${mdays} days" +"%Y-%m-%d")
-
-
-#################################
-# DIRNAME
-#   This is the foldername that is used for the data
-#
-DIRNAME=$(date +%Y%b%d)		# datestamp name for directory
-
-
-#################################
-# TMPFILE1
-# TMPAWK1
-#   These files are used during the build process for 'home' folder backups
-#
-TMPFILE1="/tmp/backup_1"	# temporary file used to build the backup script
-TMPFILE2="/tmp/backup_2"	# temporary file used to build the backup script
-TMPAWK1="/tmp/backup_awk_1"	# temporary file used to define the AWK program to build the backup script
-
-
-#################################
-# BDIR
-#  This is the base folder where daily backups are kept. 
-#
-BDIR="/var/spool/backup/daily"	# base directory for the destination of all the backups.
-
-
-#################################
-# MDIR
-#  This is the base folder where daily mysql dumps are kept.
-#
-MDIR="/var/spool/mysqldumps"    # base directory for the destination of all mysql dumps.
-
-
-#################################
-# The 3 lists below are NameLIST, DirectoryLIST, & ExcludeLIST. These are used to define the name of 
-# the backup file, the base directory for the backup file, and any exclusions that should occur from that
-# directory structure.
-#
-i=0
-NLIST[$i]="bak_etc";		DLIST[$i]="/etc";	ELIST[$((i++))]="";
-NLIST[$i]="bak_var";		DLIST[$i]="/var";	ELIST[$((i++))]="spool/backup --exclude=spool/mysqldumps --exclude=cache --exclude=log --exclude=tmp --exclude=www --exclude=run --exclude=lock";
-NLIST[$i]="bak_var_www";	DLIST[$i]="/var/www";	ELIST[$((i++))]="";
-NLIST[$i]="bak_usr";		DLIST[$i]="/usr";	ELIST[$((i++))]="";
-NLIST[$i]="bak_root";		DLIST[$i]="/root";	ELIST[$((i++))]="";
-
+source /etc/backup.config
 #################################
 # Defining scriptbypasswd
 #   This function looks for users by parsing the passwd file in /etc
@@ -175,12 +94,35 @@ function mysql_back() {
 #   The 'find' command should be updated before year 2100
 if [ ! -d $MDIR ]; then
 	mkdir -p $MDIR;
+# S3 - no folder is created in S3 as it only emulates a heirarchical file system. In fact, it is flat. So the folders are really part of the file name. For us, this means nothing to do at this stage.
 fi
 
 pushd $MDIR
 mv current $yesterday
+if [[ S3_USE ]]; then
+  list=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/current/ | awk '{print $4}')
+  for item in $list; do
+    aws s3 mv s3://${S3_BUCKET}/${S3_FOLDER}/current/${item} s3://${S3_BUCKET}/${S3_FOLDER}/${yesterday}/${item}
+  done
+fi
+
 rm -fR $mysql_eldest
+# S3 - no folder is removed in S3 as explained above regarding the flatness of S3 storage stucture
+# aws s3 find old stuff
 find 20* -maxdepth 1 -type d -ctime +${mdays} -exec rm -fR {} \;
+if [[ S3_USE ]]; then
+  list=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/ | awk '/PRE /{print $2}' | tr -d '/')
+  for dir_item in $list; do
+    files=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/${dir_item}/)
+    echo "$files" | while read file; do
+      dt=$(echo $file | awk '{print $1}')
+      fname=$(echo $file | awk '{print $4}')
+      if [[ "$dt" < "$S3_MYSQL_ELDEST" ]]; then
+        aws s3 rm s3://${S3_BUCKET}/${S3_FOLDER}/${dir_item}/${fname}
+      fi
+    done
+  done
+fi
 popd
 #################################
 # Backup the Mysql Databases
@@ -208,6 +150,9 @@ EOF
 
 chmod a+x $TMPFILE2
 mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} $TMPFILE2 {}
+
+[[ S3_USE ]] && aws s3 sync /var/spool/mysqldumps/current s3://wx-mysqldumps/bcg/current/
+
 }
 
 function backup_main() {
