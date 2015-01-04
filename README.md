@@ -11,7 +11,7 @@ This script can handle making copies to S3 of mysql backups.
 
 S3 requirements
 
-'''
+```
 apt-get install python-pip
 pip install awscli
-'''
+```
