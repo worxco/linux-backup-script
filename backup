@@ -99,7 +99,7 @@ fi
 
 pushd $MDIR
 mv current $yesterday
-if [[ $S3_USE ]]; then
+if [[ "$S3_USE" = "1" ]]; then
   list=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/current/ | awk '{print $4}')
   for item in $list; do
     aws s3 mv s3://${S3_BUCKET}/${S3_FOLDER}/current/${item} s3://${S3_BUCKET}/${S3_FOLDER}/${yesterday}/${item}
@@ -110,7 +110,7 @@ rm -fR $mysql_eldest
 # S3 - no folder is removed in S3 as explained above regarding the flatness of S3 storage stucture
 # aws s3 find old stuff
 find 20* -maxdepth 1 -type d -ctime +${mdays} -exec rm -fR {} \;
-if [[ $S3_USE ]]; then
+if [[ "$S3_USE" = "1" ]]; then
   list=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/ | awk '/PRE /{print $2}' | tr -d '/')
   for dir_item in $list; do
     files=$(aws s3 ls s3://${S3_BUCKET}/${S3_FOLDER}/${dir_item}/)
@@ -151,7 +151,7 @@ EOF
 chmod a+x $TMPFILE2
 mysql -Bse "show databases" | grep -v "mysql\|information_schema\|lost+found" | xargs -I{} $TMPFILE2 {}
 
-[[ $S3_USE ]] && aws s3 sync /var/spool/mysqldumps/current s3://${S3_BUCKET}/${S3_FOLDER}/current/
+[[ "$S3_USE" = "1" ]] && aws s3 sync /var/spool/mysqldumps/current s3://${S3_BUCKET}/${S3_FOLDER}/current/
 
 }
 
@@ -210,5 +210,5 @@ popd
 
 rm -f $TMPFILE1
 }
-[[ $mysql_backup ]] && mysql_back
-[[ $main_backup ]] && backup_main
+[[ "$mysql_backup" = "1" ]] && mysql_back
+[[ "$main_backup" = "1" ]] && backup_main
